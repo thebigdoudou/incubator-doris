@@ -125,11 +125,15 @@ public:
             case FieldType::OLAP_FIELD_TYPE_BOOL:
                 return static_cast<U>(*reinterpret_cast<const bool *>(val)) << (sizeof(U) * 8 - 1);
             case FieldType::OLAP_FIELD_TYPE_UNSIGNED_TINYINT:
+                return get_shared_int_representation<U, int8_t>(
+                        *reinterpret_cast<const int8_t *>(val), static_cast<U>(0));
             case FieldType::OLAP_FIELD_TYPE_TINYINT:
                 return get_shared_int_representation<U, int8_t>(
                         *reinterpret_cast<const int8_t *>(val), mask);
-            case FieldType::OLAP_FIELD_TYPE_SMALLINT:
             case FieldType::OLAP_FIELD_TYPE_UNSIGNED_SMALLINT:
+                return get_shared_int_representation<U, int16_t>(
+                        *reinterpret_cast<const int16_t *>(val), static_cast<U>(0));
+            case FieldType::OLAP_FIELD_TYPE_SMALLINT:
                 return get_shared_int_representation<U, int16_t>(
                         *reinterpret_cast<const int16_t *>(val), mask);
             case FieldType::OLAP_FIELD_TYPE_INT:
@@ -137,8 +141,10 @@ public:
                         *reinterpret_cast<const int32_t *>(val), mask);
             case FieldType::OLAP_FIELD_TYPE_DATETIME:
             case FieldType::OLAP_FIELD_TYPE_DATE:
-            case FieldType::OLAP_FIELD_TYPE_BIGINT:
             case FieldType::OLAP_FIELD_TYPE_UNSIGNED_BIGINT:
+                return get_shared_int_representation<U, int64_t>(
+                        *reinterpret_cast<const int64_t *>(val), static_cast<U>(0));
+            case FieldType::OLAP_FIELD_TYPE_BIGINT:
                 return get_shared_int_representation<U, int64_t>(
                         *reinterpret_cast<const int64_t *>(val), mask);
             case FieldType::OLAP_FIELD_TYPE_LARGEINT:
