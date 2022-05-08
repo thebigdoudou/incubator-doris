@@ -20,6 +20,7 @@
 #include "olap/olap_define.h"
 #include "olap/row_cursor.h"
 #include "olap/rowset/rowset_reader.h"
+#include "util/row_cursor_zorder_comparator.h"
 
 namespace doris {
 
@@ -73,15 +74,38 @@ private:
     class LevelIteratorComparator {
     public:
         LevelIteratorComparator(const bool reverse = false) : _reverse(reverse) {}
-        bool operator()(const LevelIterator* a, const LevelIterator* b);
-
+        virtual bool operator()(const LevelIterator* a, const LevelIterator* b);
+        virtual ~LevelIteratorComparator() {}
     private:
         bool _reverse;
     };
 
+    class LevelZorderIteratorComparator : public LevelIteratorComparator {
+    public:
+        LevelZorderIteratorComparator(const bool reverse = false, const size_t sort_col_num = 0)
+                : _reverse(reverse), _sort_col_num(sort_col_num) {
+            _comparator = RowCurosrZOrderComparator(sort_col_num);
+        }
+        virtual bool operator()(const LevelIterator* a, const LevelIterator* b);
+        virtual ~LevelZorderIteratorComparator() = default;
+
+    private:
+        bool _reverse = false;
+        size_t _sort_col_num = 0;
+        RowCurosrZOrderComparator _comparator;
+    };
+
+    class BaseComparator {
+    public:
+        BaseComparator(std::shared_ptr<LevelIteratorComparator>& cmp);
+        bool operator()(const LevelIterator* a, const LevelIterator* b);
+
+    private:
+        std::shared_ptr<LevelIteratorComparator> _cmp;
+    };
+
     typedef std::priority_queue<LevelIterator*, std::vector<LevelIterator*>,
-                                LevelIteratorComparator>
-            MergeHeap;
+                                 BaseComparator> MergeHeap;
     // Iterate from rowset reader. This Iterator usually like a leaf node
     class Level0Iterator : public LevelIterator {
     public:
@@ -116,7 +140,8 @@ private:
     // Iterate from LevelIterators (maybe Level0Iterators or Level1Iterator or mixed)
     class Level1Iterator : public LevelIterator {
     public:
-        Level1Iterator(const std::list<LevelIterator*>& children, bool merge, bool reverse);
+        Level1Iterator(const std::list<LevelIterator*>& children, bool merge, bool reverse,
+                        SortType sort_type, int sort_col_num);
 
         OLAPStatus init() override;
 
@@ -154,6 +179,8 @@ private:
         std::unique_ptr<MergeHeap> _heap;
         // used when `_merge == false`
         int _child_idx = 0;
+        SortType _sort_type;
+        int _sort_col_num;
     };
 
     std::unique_ptr<LevelIterator> _inner_iter;

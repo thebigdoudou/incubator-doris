@@ -106,6 +106,8 @@ set(UTIL_FILES
   s3_storage_backend.cpp
   s3_util.cpp
   topn_counter.cpp
+  row_cursor_zorder_comparator.cpp
+
 )
 
 if (WITH_MYSQL)

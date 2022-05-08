@@ -24,6 +24,7 @@ import org.apache.doris.analysis.CreateTableStmt;
 import org.apache.doris.analysis.Expr;
 import org.apache.doris.analysis.SlotDescriptor;
 import org.apache.doris.analysis.SlotRef;
+import org.apache.doris.analysis.DataSortInfo;
 import org.apache.doris.backup.Status;
 import org.apache.doris.backup.Status.ErrCode;
 import org.apache.doris.catalog.DistributionInfo.DistributionInfoType;
@@ -54,6 +55,7 @@ import org.apache.doris.thrift.TStorageMedium;
 import org.apache.doris.thrift.TStorageType;
 import org.apache.doris.thrift.TTableDescriptor;
 import org.apache.doris.thrift.TTableType;
+import org.apache.doris.thrift.TSortType;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -195,6 +197,12 @@ public class OlapTable extends Table {
         return tableProperty != null
                 && tableProperty.getDynamicPartitionProperty() != null
                 && tableProperty.getDynamicPartitionProperty().isExist();
+    }
+    
+    public boolean isZOrderSort() {
+        return tableProperty != null
+                && tableProperty.getDataSortInfo() != null
+                && tableProperty.getDataSortInfo().getSortType() == TSortType.ZORDER;
     }
 
     public void setBaseIndexId(long baseIndexId) {
@@ -1569,6 +1577,15 @@ public class OlapTable extends Table {
         tableProperty.buildInMemory();
     }
 
+    public void setDataSortInfo(DataSortInfo dataSortInfo) {
+        if (tableProperty == null) {
+            tableProperty = new TableProperty(new HashMap<>());
+        }
+        tableProperty.modifyDataSortInfoProperties(dataSortInfo);
+        tableProperty.buildDataSortInfo();
+    }
+
+
     // return true if partition with given name already exist, both in partitions and temp partitions.
     // return false otherwise
     public boolean checkPartitionNameExist(String partitionName) {
@@ -1714,6 +1731,12 @@ public class OlapTable extends Table {
         return tableProperty.getStorageFormat();
     }
 
+    public DataSortInfo getDataSortInfo() {
+        if (tableProperty == null) {
+            return new DataSortInfo(TSortType.LEXICAL, this.getKeysNum());
+        }
+        return tableProperty.getDataSortInfo();
+    }
     // For non partitioned table:
     //   The table's distribute hash columns need to be a subset of the aggregate columns.
     //
